@@ -9,19 +9,51 @@
     </style>
 </head>
 <body>
-<canvas id="myCanvas" width="1024" height="1024"></canvas>
+<canvas id="myCanvas" width="2048" height="2048"></canvas>
 <script>
+
+    var brown = [191, 129, 30];
+    var blue = [78, 181, 233];
+
+
     function loadCanvas(dataURL) {
         var canvas = document.getElementById('myCanvas');
         var context = canvas.getContext('2d');
-
-        // load image from data url
         var imageObj = new Image();
         imageObj.onload = function() {
             context.drawImage(this, 0, 0);
+
+            var width = 320-64;
+            var yPos = 644;
+
+            var dataColumn = context.getImageData(63, 0, width, 1585);
+
+            var yStart = (width*4)*yPos;
+            console.log("Total bytes: "+dataColumn.data.length);
+            console.log("yStart: "+yStart);
+            for (var x = 0; x < width*4; x += 4) {
+                var red = dataColumn.data[yStart+x];
+                var green = dataColumn.data[yStart+x+1];
+                var blue = dataColumn.data[yStart+x+2];
+                var alpha = dataColumn.data[yStart+x+3];
+
+                console.log("X: "+x+" R:"+red+" G:"+green+" B:"+blue);
+
+                dataColumn.data[yStart+x] = 255;
+                dataColumn.data[yStart+x+1] = 0;
+                dataColumn.data[yStart+x+2] = 0;
+
+                if (brown[0] == red && brown[1] == green && brown[2] == blue) {
+                    console.log("found at: "+x)
+                }
+
+            }
+            context.putImageData(dataColumn,63,0);
+
         };
 
         imageObj.src = dataURL;
+
     }
 
     loadCanvas('/Untergruppenbach-1.png');
