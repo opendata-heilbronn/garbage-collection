@@ -12,47 +12,89 @@
 <canvas id="myCanvas" width="1024" height="1024"></canvas>
 <script type="text/javascript" src="http://mozilla.github.io/pdf.js/build/pdf.js"></script>
 <script>
+    var colorCodes = {
+        brown: [204, 134, 44, "brown"],
+        blue: [56, 188, 234, "blue"],
+        grey: [117, 150, 165, "grey"],
+        red: [239, 44, 25, "red"]
+    }
 
-    var brown = [204, 134, 44];
-    var blue = [78, 181, 233];
-    var grey = [117, 150, 165];
-
-    function parseCanvas(context) {
+    function parseCanvas(context, pageNumber) {
         var xStartOfMonths = 35;
         var width = 145;
         var yPos = 200;
         var heightOfOneDay = 22;
 
-        var dataColumn = context.getImageData(xStartOfMonths, 0, width, 1585);
+        for (var month = 0; month <= 5; month++) {
+            var xStartOfCurrentMonth = xStartOfMonths + width * month;
 
-        var numberOfBytesPerPixel = 4;
-        for (var line = 0; line < 31; line++) {
-            var yPosOfLine = yPos + heightOfOneDay * line;
+            var dataColumn = context.getImageData(xStartOfCurrentMonth, 0, width, 1585);
 
-            var pixelStart = (width * numberOfBytesPerPixel) * yPosOfLine;
-            var scanPixelStart = (width * numberOfBytesPerPixel) * (yPosOfLine + 5);
-            var foundBrown = false;
+            var numberOfBytesPerPixel = 4;
+            for (var line = 0; line < 31; line++) {
+                var yPosOfLine = yPos + heightOfOneDay * line;
 
+                var pixelStart = (width * numberOfBytesPerPixel) * yPosOfLine;
+                var scanPixelStart = (width * numberOfBytesPerPixel) * (yPosOfLine + 5);
+                var foundBrown = false;
+                var foundGrey = false;
+                var foundRed = false;
+                var foundBlue = false;
+                var found = {};
 
-            for (var pixel = 0; pixel < width * numberOfBytesPerPixel; pixel += numberOfBytesPerPixel) {
-                var red = dataColumn.data[scanPixelStart + pixel];
-                var green = dataColumn.data[scanPixelStart + pixel + 1];
-                var blue = dataColumn.data[scanPixelStart + pixel + 2];
-//                console.log(red +" "+green+" "+blue+ " at line "+ line);
-                dataColumn.data[pixelStart + pixel] = 255;
-                dataColumn.data[pixelStart + pixel + 1] = 0;
-                dataColumn.data[pixelStart + pixel + 2] = 0;
+                for (var pixel = 0; pixel < width * numberOfBytesPerPixel; pixel += numberOfBytesPerPixel) {
+                    var red = dataColumn.data[scanPixelStart + pixel];
+                    var green = dataColumn.data[scanPixelStart + pixel + 1];
+                    var blue = dataColumn.data[scanPixelStart + pixel + 2];
+                    //console.log(red +" "+green+" "+blue+ " at line "+ line);
+                    dataColumn.data[pixelStart + pixel] = 255;
+                    dataColumn.data[pixelStart + pixel + 1] = 0;
+                    dataColumn.data[pixelStart + pixel + 2] = 0;
 
-
-                if (brown[0] == red && brown[1] == green && brown[2] == blue && !foundBrown) {
-                    console.log("found brown at: " + (line + 1));
-                    foundBrown = true;
+                    var checkColor = function(colorCode){
+                        if (colorCode[0] == red && colorCode[1] == green && colorCode[2] == blue && !found[colorCode[3]]) {
+                            console.log("[page " + pageNumber + "] found "+colorCode[3]+" at: " + (line + 1) + " " + ((month + 1 + (6 * (pageNumber - 1)))));
+                            found[colorCode[3]] = true;
+                        }
+                    };
+                    checkColor(colorCodes.brown);
+                    checkColor(colorCodes.blue);
+                    checkColor(colorCodes.grey);
+                    checkColor(colorCodes.red);
                 }
             }
+
+            context.putImageData(dataColumn, xStartOfCurrentMonth, 0);
         }
 
-        context.putImageData(dataColumn, xStartOfMonths, 0);
+        return true;
     }
+
+    var analyzePage = function (pdf, pageNumber) {
+        return pdf.getPage(pageNumber).then(function getPageHelloWorld(page) {
+            var scale = 1.55;
+            var viewport = page.getViewport(scale);
+
+            //
+            // Prepare canvas using PDF page dimensions
+            //
+            var canvas = document.getElementById('myCanvas');
+            var context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            //
+            // Render PDF page into canvas context
+            //
+            var renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            return page.render(renderContext).then(function () {
+                return parseCanvas(context, pageNumber);
+            });
+        });
+    };
 
     //
     // If absolute URL from the remote server is provided, configure the CORS
@@ -80,29 +122,10 @@
         //
         // Fetch the first page
         //
-        pdf.getPage(1).then(function getPageHelloWorld(page) {
-            var scale = 1.55;
-            var viewport = page.getViewport(scale);
 
-            //
-            // Prepare canvas using PDF page dimensions
-            //
-            var canvas = document.getElementById('myCanvas');
-            var context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            //
-            // Render PDF page into canvas context
-            //
-            var renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-            page.render(renderContext).then(function () {
-                parseCanvas(context);
-            });
-        });
+        analyzePage(pdf, 1).then(function () {
+            analyzePage(pdf, 2);
+        })
     });
 
 
