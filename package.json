@@ -1,0 +1,16 @@
+{
+  "name": "ll",
+  "version": "1.0.0",
+  "description": "pdf to calendar converter",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "OK Lab Heilbronn",
+  "license": "ISC",
+  "dependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-connect": "^0.11.2",
+    "grunt-contrib-watch": "^0.6.1"
+  }
+}
