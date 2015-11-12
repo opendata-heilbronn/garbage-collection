@@ -12,6 +12,48 @@
 <canvas id="myCanvas" width="1024" height="1024"></canvas>
 <script type="text/javascript" src="http://mozilla.github.io/pdf.js/build/pdf.js"></script>
 <script>
+
+    var brown = [204, 134, 44];
+    var blue = [78, 181, 233];
+    var grey = [117, 150, 165];
+
+    function parseCanvas(context) {
+        var xStartOfMonths = 35;
+        var width = 145;
+        var yPos = 200;
+        var heightOfOneDay = 22;
+
+        var dataColumn = context.getImageData(xStartOfMonths, 0, width, 1585);
+
+        var numberOfBytesPerPixel = 4;
+        for (var line = 0; line < 31; line++) {
+            var yPosOfLine = yPos + heightOfOneDay * line;
+
+            var pixelStart = (width * numberOfBytesPerPixel) * yPosOfLine;
+            var scanPixelStart = (width * numberOfBytesPerPixel) * (yPosOfLine + 5);
+            var foundBrown = false;
+
+
+            for (var pixel = 0; pixel < width * numberOfBytesPerPixel; pixel += numberOfBytesPerPixel) {
+                var red = dataColumn.data[scanPixelStart + pixel];
+                var green = dataColumn.data[scanPixelStart + pixel + 1];
+                var blue = dataColumn.data[scanPixelStart + pixel + 2];
+//                console.log(red +" "+green+" "+blue+ " at line "+ line);
+                dataColumn.data[pixelStart + pixel] = 255;
+                dataColumn.data[pixelStart + pixel + 1] = 0;
+                dataColumn.data[pixelStart + pixel + 2] = 0;
+
+
+                if (brown[0] == red && brown[1] == green && brown[2] == blue && !foundBrown) {
+                    console.log("found brown at: " + (line + 1));
+                    foundBrown = true;
+                }
+            }
+        }
+
+        context.putImageData(dataColumn, xStartOfMonths, 0);
+    }
+
     //
     // If absolute URL from the remote server is provided, configure the CORS
     // header on that server.
@@ -39,7 +81,7 @@
         // Fetch the first page
         //
         pdf.getPage(1).then(function getPageHelloWorld(page) {
-            var scale = 1;
+            var scale = 1.55;
             var viewport = page.getViewport(scale);
 
             //
@@ -57,9 +99,12 @@
                 canvasContext: context,
                 viewport: viewport
             };
-            page.render(renderContext);
+            page.render(renderContext).then(function () {
+                parseCanvas(context);
+            });
         });
     });
+
 
 </script>
 </body>
