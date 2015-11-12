@@ -12,14 +12,16 @@
 <canvas id="myCanvas" width="1024" height="1024"></canvas>
 <script type="text/javascript" src="http://mozilla.github.io/pdf.js/build/pdf.js"></script>
 <script>
+    PDFJS.workerSrc = 'http://mozilla.github.io/pdf.js/build/pdf.worker.js';
+
     var colorCodes = {
         brown: [204, 134, 44, "brown"],
         blue: [56, 188, 234, "blue"],
         grey: [117, 150, 165, "grey"],
         red: [239, 44, 25, "red"]
-    }
+    };
 
-    function parseCanvas(context, pageNumber) {
+    function parseCanvas(context, pageNumber, pdfUrl) {
         var xStartOfMonths = 35;
         var width = 145;
         var yPos = 200;
@@ -36,10 +38,6 @@
 
                 var pixelStart = (width * numberOfBytesPerPixel) * yPosOfLine;
                 var scanPixelStart = (width * numberOfBytesPerPixel) * (yPosOfLine + 5);
-                var foundBrown = false;
-                var foundGrey = false;
-                var foundRed = false;
-                var foundBlue = false;
                 var found = {};
 
                 for (var pixel = 0; pixel < width * numberOfBytesPerPixel; pixel += numberOfBytesPerPixel) {
@@ -51,9 +49,9 @@
                     dataColumn.data[pixelStart + pixel + 1] = 0;
                     dataColumn.data[pixelStart + pixel + 2] = 0;
 
-                    var checkColor = function(colorCode){
+                    var checkColor = function (colorCode) {
                         if (colorCode[0] == red && colorCode[1] == green && colorCode[2] == blue && !found[colorCode[3]]) {
-                            console.log("[page " + pageNumber + "] found "+colorCode[3]+" at: " + (line + 1) + " " + ((month + 1 + (6 * (pageNumber - 1)))));
+                            console.log("[page " + pageNumber + ", pdf " + pdfUrl + "] found " + colorCode[3] + " at: " + (line + 1) + " " + ((month + 1 + (6 * (pageNumber - 1)))));
                             found[colorCode[3]] = true;
                         }
                     };
@@ -70,7 +68,7 @@
         return true;
     }
 
-    var analyzePage = function (pdf, pageNumber) {
+    var analyzePage = function (pdf, pageNumber, pdfUrl) {
         return pdf.getPage(pageNumber).then(function getPageHelloWorld(page) {
             var scale = 1.55;
             var viewport = page.getViewport(scale);
@@ -79,9 +77,9 @@
             // Prepare canvas using PDF page dimensions
             //
             var canvas = document.getElementById('myCanvas');
-            var context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
+            var context = canvas.getContext('2d');
 
             //
             // Render PDF page into canvas context
@@ -91,44 +89,100 @@
                 viewport: viewport
             };
             return page.render(renderContext).then(function () {
-                return parseCanvas(context, pageNumber);
+                return parseCanvas(context, pageNumber, pdfUrl);
             });
         });
     };
 
-    //
-    // If absolute URL from the remote server is provided, configure the CORS
-    // header on that server.
-    //
-    var url = 'wimpfen.pdf';
-
-    //
-    // Disable workers to avoid yet another cross-origin issue (workers need
-    // the URL of the script to be loaded, and dynamically loading a cross-origin
-    // script does not work).
-    //
-    // PDFJS.disableWorker = true;
-
-    //
-    // The workerSrc property shall be specified.
-    //
-    PDFJS.workerSrc = 'http://mozilla.github.io/pdf.js/build/pdf.worker.js';
-
-    //
-    // Asynchronous download PDF
-    //
-    // promises
-    PDFJS.getDocument(url).then(function getPdfHelloWorld(pdf) {
+    var scrapePdf = function (pdfUrl) {
         //
-        // Fetch the first page
+        // Asynchronous download PDF
         //
+        // promises
+        return PDFJS.getDocument(pdfUrl).then(function getPdfHelloWorld(pdf) {
+            console.log('analyzing ' + pdfUrl);
+            return analyzePage(pdf, 1, pdfUrl).then(function () {
+                return analyzePage(pdf, 2, pdfUrl);
+            });
+        });
+    };
 
-        analyzePage(pdf, 1).then(function () {
-            analyzePage(pdf, 2);
-        })
+    var baseUrl = "http://www.landkreis-heilbronn.de/sixcms/media.php/103/";
+    var pdfNames = ["Abstatt%5B1%5D.pdf",
+        "Bad%20Friedrichshall-Duttenberg%2C%20-Hagenbach%2C%20-Jagstfeld%2C%20-Untergriesheim2015neu.pdf",
+        "Bad_Friedrichshall-Kochendorf%2C_-Plattenwald%5B1%5D.pdf",
+        "Bad%20Rappenau-Babst_Bonf_Fuerf_Gromb_Obergi_Tresch.pdf",
+        "Bad_Rappenau-Stadt_Heinsh_Wollenb_Zimmerh_neu%5B1%5D.pdf",
+        "Bad_Wimpfen%5B1%5D.pdf",
+        "Beilstein%5B1%5D.pdf",
+        "Brackenheim-Botenheim_Duerrenzimmern.pdf",
+        "Brackenheim-Stadt%2C_-Haberschlacht%2C_-Hausen%2C_-Meimsheim%2C_-Neipperg%2C_-Stockheim%5B1%5D.pdf",
+        "Cleebronn%5B1%5D.pdf",
+        "Eberstadt%5B1%5D.pdf",
+        "Ellhofen%5B1%5D.pdf",
+        "Eppingen_Muehlbach.pdf",
+        "Eppingen2015_Stadt_Suedl_neu.pdf",
+        "Eppingen_Stadt_Noerdl_neu.pdf",
+        "Eppingen_Adelshofen_neu.pdf",
+        "Eppingen-Kleingartach%2C_-Rohrbach%5B1%5D.pdf",
+        "Erlenbach%5B1%5D.pdf",
+        "Gemmingen-Stebbach%5B1%5D.pdf",
+        "Gemmingen-Hauptort%5B1%5D.pdf",
+        "Gundelsheim%5B1%5D.pdf",
+        "Gueglingen.37101.pdf",
+        "Ilsfeld-Schozach%5B1%5D.pdf",
+        "Ilsfeld_Hauptort_Abstetter%20Hof_Auenstein_Helfenberg_Wuestenhausen.pdf",
+        "Hardthausen%5B1%5D.pdf",
+        "Ittlingen%5B1%5D.pdf",
+        "Jagsthausen%5B1%5D.pdf",
+        "Kirchardt%5B1%5D.pdf",
+        "Langenbrettach%5B1%5D.pdf",
+        "Lauffen%5B1%5D.pdf",
+        "Lehrensteinsfeld%5B1%5D.pdf",
+        "Leingarten%5B1%5D.pdf",
+        "Loewenstein.pdf",
+        "Massenbachhausen%5B1%5D.pdf",
+        "Moeckmuehl_Zuettlingen.pdf",
+        "Moeckmuehl_Stadt_Bittelbronn_Korb_Ruchsen.pdf",
+        "Neckarsulm-Amorbach%5B1%5D.pdf",
+        "Neckarsulm_Stadt_Dahenfeld%5B1%5D.pdf",
+        "Neckarsulm-Obereisesheim%5B1%5D.pdf",
+        "Neckarwestheim%5B1%5D.pdf",
+        "Neudenau%5B1%5D.pdf",
+        "Neuenstadt_am_Kocher%5B1%5D.pdf",
+        "Wuestenrot.pdf",
+        "Zaberfeld-Leonbronn%2C_-Ochsenburg%5B1%5D.pdf",
+        "Zaberfeld-Hauptort%2C_-Michelbach%5B1%5D.pdf",
+        "Widdern%5B1%5D.pdf",
+        "Weinsberg_Stadt_Gellmersbach_Weissenhof_Wimmental.pdf",
+        "Weinsberg-Grantschen%5B1%5D.pdf",
+        "Untereisesheim%5B1%5D.pdf",
+        "Untergruppenbach%5B1%5D.pdf",
+        "Talheim%5B1%5D.pdf",
+        "Siegelsbach%5B1%5D.pdf",
+        "Schwaigern-Niederhofen%5B1%5D.pdf",
+        "Schwaigern-Massenbach%5B1%5D.pdf",
+        "Schwaigern-Stadt%2C_-Stetten%5B1%5D.pdf",
+        "Roigheim%5B1%5D.pdf",
+        "Pfaffenhofen%5B1%5D.pdf",
+        "Offenau%5B1%5D.pdf",
+        "Oedheim%5B1%5D.pdf",
+        "Obersulm-Eichelberg%2C_-Friedrichshof%2C_-Weiler%2C_-Willsbach%5B1%5D.pdf",
+        "Obersulm_Affaltrach_Eschenau_Suelzbach_Wieslensdorf.pdf",
+        "Nordheim%5B1%5D.pdf"];
+
+    var startFn;
+    var scrapePromise = new Promise(function (resolve) {
+        startFn = resolve;
     });
 
+    pdfNames.forEach(function (pdfName) {
+        scrapePromise = scrapePromise.then(function () {
+            return scrapePdf(pdfName);
+        });
+    });
 
+    startFn();
 </script>
 </body>
 </html>
