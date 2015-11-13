@@ -1,3 +1,6 @@
+var sys = require('sys')
+var exec = require('child_process').exec;
+var child;
 
 
 var baseUrl = "http://www.landkreis-heilbronn.de/sixcms/media.php/103/";
@@ -64,7 +67,17 @@ var pdfNames = ["Abstatt%5B1%5D.pdf",
     "Obersulm_Affaltrach_Eschenau_Suelzbach_Wieslensdorf.pdf",
     "Nordheim%5B1%5D.pdf"];
 
+
+
 pdfNames.forEach(function(pdfName) {
     var pdfUrl = baseUrl + pdfName;
-    console.log('wget "' + pdfUrl + '"');
+    var wgetCommand = 'wget "'+pdfUrl+'"';
+
+    child = exec(wgetCommand, function (error, stdout, stderr) {
+        sys.print('stdout: ' + stdout);
+        sys.print('stderr: ' + stderr);
+        if (error !== null) {
+            console.log('exec error: ' + error);
+        }
+    });
 });
