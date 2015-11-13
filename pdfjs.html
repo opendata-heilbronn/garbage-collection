@@ -9,23 +9,34 @@
     </style>
 </head>
 <body>
+<div id="result"></div>
 <canvas id="myCanvas" width="1024" height="1024"></canvas>
 <script type="text/javascript" src="http://mozilla.github.io/pdf.js/build/pdf.js"></script>
 <script>
     PDFJS.workerSrc = 'http://mozilla.github.io/pdf.js/build/pdf.worker.js';
 
     var colorCodes = {
-        brown: [204, 134, 44, "brown"],
-        blue: [56, 188, 234, "blue"],
-        grey: [117, 150, 165, "grey"],
-        red: [239, 44, 25, "red"]
+        brown: [204, 134, 44, "Biomüll"],
+        blue: [56, 188, 234, "Papier"],
+        grey: [117, 150, 165, "Restmüll"],
+        red: [239, 44, 25, "Schadstoffsammlung"]
     };
+
+    var allData = {};
 
     function parseCanvas(context, pageNumber, pdfUrl) {
         var xStartOfMonths = 35;
         var width = 145;
         var yPos = 200;
         var heightOfOneDay = 22;
+
+        var data = {};
+        allData[decodeURI(pdfUrl)] = data;
+
+        for (var color in colorCodes) {
+            var colors = colorCodes[color];
+            data[colors[3]] = [];
+        }
 
         for (var month = 0; month <= 5; month++) {
             var xStartOfCurrentMonth = xStartOfMonths + width * month;
@@ -51,7 +62,15 @@
 
                     var checkColor = function (colorCode) {
                         if (colorCode[0] == red && colorCode[1] == green && colorCode[2] == blue && !found[colorCode[3]]) {
-                            console.log("[page " + pageNumber + ", pdf " + pdfUrl + "] found " + colorCode[3] + " at: " + (line + 1) + " " + ((month + 1 + (6 * (pageNumber - 1)))));
+
+                            var dayValue =  line + 1;
+                            var monthValue = month + 1 + (6 * (pageNumber - 1));
+                            var categoryValue = colorCode[3];
+
+                            var dates = data[categoryValue];
+                            dates.push(dayValue+"."+monthValue+".2015");
+
+                            console.log("[page " + pageNumber + ", pdf " + pdfUrl + "] found " + categoryValue + " at: " + dayValue + " " + monthValue);
                             found[colorCode[3]] = true;
                         }
                     };
@@ -183,6 +202,10 @@
     });
 
     startFn();
+    scrapePromise.then(function(){
+        var result = document.getElementById('result');
+        result.innerText = JSON.stringify(allData);
+    });
 </script>
 </body>
 </html>
